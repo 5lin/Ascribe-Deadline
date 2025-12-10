@@ -3,6 +3,13 @@
     "appName": "倒计时笔记",
     "webDir": "dist",
     "server": {
-        "androidScheme": "https"
+        "androidScheme": "https",
+        "allowNavigation": [
+            "pb.l50.top",
+            "*.l50.top"
+        ]
+    },
+    "android": {
+        "allowMixedContent": true
     }
 }
