@@ -621,12 +621,18 @@ const selectDate = async (dateStr) => {
       noteContent.value = note.content || ''
       notesMap.value[dateStr] = note.id
 
-      if (note.media && note.media.length > 0) {
-        currentImages.value = note.media.map(filename => ({
-          file: null,
-          url: pb.files.getURL(note, filename),
-          existing: filename
-        }))
+      // 安全地处理图片，即使图片处理失败也不影响文字显示
+      try {
+        if (note.media && note.media.length > 0) {
+          currentImages.value = note.media.map(filename => ({
+            file: null,
+            url: pb.files.getURL(note, filename),
+            existing: filename
+          }))
+        }
+      } catch (imgErr) {
+        log('图片处理失败: ' + imgErr.message)
+        currentImages.value = []
       }
       log('已加载笔记')
     } else {
