@@ -222,11 +222,26 @@
       </div>
     </Transition>
 
-    <!-- 状态指示器 -->
+    <!-- 状态指示器 + 调试按钮 -->
     <div class="fixed bottom-4 left-4 flex items-center gap-2 px-3 py-2 glass rounded-full text-xs">
       <div class="w-2 h-2 rounded-full" :class="connected ? 'bg-green-400' : 'bg-yellow-400'"></div>
       <span>{{ connected ? '云端同步' : '本地模式' }}</span>
+      <button @click="showDebugPanel = !showDebugPanel" class="ml-2 px-2 py-1 bg-red-500/50 rounded text-[10px]">🐛</button>
     </div>
+
+    <!-- 调试面板 -->
+    <Transition name="fade">
+      <div v-if="showDebugPanel" class="fixed inset-x-4 bottom-20 z-[200] bg-black/95 rounded-xl p-4 max-h-60 overflow-y-auto text-xs font-mono">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-green-400 font-bold">调试日志</span>
+          <button @click="showDebugPanel = false" class="text-white/50">×</button>
+        </div>
+        <div v-for="(log, i) in debugLogs" :key="i" class="text-green-300/80 py-1 border-b border-white/10 break-all">
+          {{ log }}
+        </div>
+        <div v-if="debugLogs.length === 0" class="text-white/30">暂无日志</div>
+      </div>
+    </Transition>
 
     <!-- 设置弹窗 -->
     <Transition name="fade">
@@ -333,8 +348,15 @@ const COLLECTION = 'notes'
 const pb = new PocketBase(PB_URL)
 const connected = ref(false)
 
+// 调试日志（可在界面上显示）
+const debugLogs = ref([])
+const showDebugPanel = ref(false)
+
 const log = (msg) => {
-  console.log(`[${new Date().toLocaleTimeString()}] ${msg}`)
+  const logEntry = `[${new Date().toLocaleTimeString()}] ${msg}`
+  console.log(logEntry)
+  debugLogs.value.unshift(logEntry)
+  if (debugLogs.value.length > 20) debugLogs.value.pop()
 }
 
 // === 认证相关 ===
@@ -608,26 +630,54 @@ const removeImage = (idx) => {
   debounceSave()
 }
 
-// 将远程图片转换为 base64（绕过 CORS）
+// 将远程图片转换为 base64（使用 PocketBase token）
 const fetchImageAsBase64 = async (url) => {
   try {
-    const response = await fetch(url)
+    log('尝试加载图片: ' + url)
+    
+    // 尝试使用 PocketBase 的 auth token
+    const headers = {}
+    if (pb.authStore.token) {
+      headers['Authorization'] = pb.authStore.token
+    }
+    
+    const response = await fetch(url, { 
+      method: 'GET',
+      headers: headers,
+      mode: 'cors',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      log('图片响应错误: ' + response.status + ' ' + response.statusText)
+      return url // 返回原始 URL 作为 fallback
+    }
+    
     const blob = await response.blob()
+    log('图片 blob 大小: ' + blob.size)
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result)
-      reader.onerror = reject
+      reader.onloadend = () => {
+        log('Base64 转换成功')
+        resolve(reader.result)
+      }
+      reader.onerror = (err) => {
+        log('FileReader 错误: ' + err)
+        reject(err)
+      }
       reader.readAsDataURL(blob)
     })
   } catch (err) {
-    log('图片转换失败: ' + err.message)
-    return null
+    log('图片转换失败: ' + err.message + ' URL: ' + url)
+    // 返回原始 URL 作为 fallback，让浏览器尝试加载
+    return url
   }
 }
 
 // 图片加载错误处理
 const handleImageError = (event, img) => {
-  log('图片加载失败: ' + img.url)
+  log('图片加载失败 (img 标签): ' + img.url)
   event.target.style.opacity = '0.3'
 }
 
