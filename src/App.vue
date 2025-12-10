@@ -609,35 +609,39 @@ const selectDate = async (dateStr) => {
   currentImages.value = []
   saveStatus.value = ''
 
-  if (connected.value) {
-    try {
-      log('加载笔记: ' + dateStr)
-      const records = await pb.collection(COLLECTION).getList(1, 1, {
-        filter: `date = "${dateStr}"`
-      })
+  // 始终尝试从云端加载（公开读取）
+  try {
+    log('加载笔记: ' + dateStr)
+    const records = await pb.collection(COLLECTION).getList(1, 1, {
+      filter: `date = "${dateStr}"`
+    })
 
-      if (records.items.length > 0) {
-        const note = records.items[0]
-        noteContent.value = note.content || ''
-        notesMap.value[dateStr] = note.id
+    if (records.items.length > 0) {
+      const note = records.items[0]
+      noteContent.value = note.content || ''
+      notesMap.value[dateStr] = note.id
 
-        if (note.media && note.media.length > 0) {
-          currentImages.value = note.media.map(filename => ({
-            file: null,
-            url: pb.files.getURL(note, filename),
-            existing: filename
-          }))
-        }
-        log('已加载笔记')
-      } else {
-        noteContent.value = ''
-        delete notesMap.value[dateStr]
+      if (note.media && note.media.length > 0) {
+        currentImages.value = note.media.map(filename => ({
+          file: null,
+          url: pb.files.getURL(note, filename),
+          existing: filename
+        }))
       }
-    } catch (err) {
-      log('加载失败: ' + err.message)
+      log('已加载笔记')
+    } else {
       noteContent.value = ''
+      delete notesMap.value[dateStr]
+      // 如果云端没有，尝试本地
+      const localNote = localStorage.getItem('note_' + dateStr)
+      if (localNote) {
+        noteContent.value = localNote
+        notesMap.value[dateStr] = true
+      }
     }
-  } else {
+  } catch (err) {
+    log('云端加载失败，使用本地: ' + err.message)
+    // 云端失败，回退到本地
     const localNote = localStorage.getItem('note_' + dateStr)
     noteContent.value = localNote || ''
     if (localNote) {
@@ -790,9 +794,7 @@ onMounted(async () => {
   editStartDate.value = startDateStr.value
   editGoalTitle.value = goalTitle.value
 
-  await loadSettings()
-  selectDate(new Date().toISOString().split('T')[0])
-
+  // 先检查登录状态
   if (pb.authStore.isValid) {
     currentUser.value = pb.authStore.model
     isLoggedIn.value = true
@@ -800,7 +802,12 @@ onMounted(async () => {
     log('已恢复登录: ' + currentUser.value.email)
   }
 
+  // 先加载设置和所有笔记
+  await loadSettings()
   await loadAllNotes()
+  
+  // 最后选择今天的日期
+  selectDate(new Date().toISOString().split('T')[0])
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.relative')) {
