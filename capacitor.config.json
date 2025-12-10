@@ -5,11 +5,17 @@
     "server": {
         "androidScheme": "https",
         "allowNavigation": [
-            "pb.l50.top",
-            "*.l50.top"
+            "*"
         ]
     },
     "android": {
-        "allowMixedContent": true
+        "allowMixedContent": true,
+        "captureInput": true,
+        "webContentsDebuggingEnabled": true
+    },
+    "plugins": {
+        "CapacitorHttp": {
+            "enabled": true
+        }
     }
 }
