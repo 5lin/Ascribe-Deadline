@@ -222,26 +222,11 @@
       </div>
     </Transition>
 
-    <!-- 状态指示器 + 调试按钮 -->
+    <!-- 状态指示器 -->
     <div class="fixed bottom-4 left-4 flex items-center gap-2 px-3 py-2 glass rounded-full text-xs">
       <div class="w-2 h-2 rounded-full" :class="connected ? 'bg-green-400' : 'bg-yellow-400'"></div>
       <span>{{ connected ? '云端同步' : '本地模式' }}</span>
-      <button @click="showDebugPanel = !showDebugPanel" class="ml-2 px-2 py-1 bg-red-500/50 rounded text-[10px]">🐛</button>
     </div>
-
-    <!-- 调试面板 -->
-    <Transition name="fade">
-      <div v-if="showDebugPanel" class="fixed inset-x-4 bottom-20 z-[200] bg-black/95 rounded-xl p-4 max-h-60 overflow-y-auto text-xs font-mono">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-green-400 font-bold">调试日志</span>
-          <button @click="showDebugPanel = false" class="text-white/50">×</button>
-        </div>
-        <div v-for="(log, i) in debugLogs" :key="i" class="text-green-300/80 py-1 border-b border-white/10 break-all">
-          {{ log }}
-        </div>
-        <div v-if="debugLogs.length === 0" class="text-white/30">暂无日志</div>
-      </div>
-    </Transition>
 
     <!-- 设置弹窗 -->
     <Transition name="fade">
@@ -313,24 +298,6 @@
               class="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50">
               {{ authLoading ? '登录中...' : '登录' }}
             </button>
-          </div>
-
-          <div class="mt-4 pt-4 border-t border-white/10 text-center">
-            <button @click="showRegister = !showRegister" class="text-indigo-400 hover:text-indigo-300 text-sm">
-              {{ showRegister ? '返回登录' : '创建新账户' }}
-            </button>
-            <div v-if="showRegister" class="mt-4 space-y-3">
-              <input v-model="registerForm.email" type="email" placeholder="邮箱"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 outline-none focus:border-indigo-400 transition">
-              <input v-model="registerForm.password" type="password" placeholder="密码 (至少8位)"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 outline-none focus:border-indigo-400 transition">
-              <input v-model="registerForm.passwordConfirm" type="password" placeholder="确认密码"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 outline-none focus:border-indigo-400 transition">
-              <button @click="register" :disabled="authLoading"
-                class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50">
-                {{ authLoading ? '注册中...' : '注册' }}
-              </button>
-            </div>
           </div>
         </div>
       </div>
