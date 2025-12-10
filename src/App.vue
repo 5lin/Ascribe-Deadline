@@ -608,11 +608,27 @@ const removeImage = (idx) => {
   debounceSave()
 }
 
+// 将远程图片转换为 base64（绕过 CORS）
+const fetchImageAsBase64 = async (url) => {
+  try {
+    const response = await fetch(url)
+    const blob = await response.blob()
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch (err) {
+    log('图片转换失败: ' + err.message)
+    return null
+  }
+}
+
 // 图片加载错误处理
 const handleImageError = (event, img) => {
   log('图片加载失败: ' + img.url)
-  // 可以设置一个占位图或隐藏
-  event.target.style.display = 'none'
+  event.target.style.opacity = '0.3'
 }
 
 const selectDate = async (dateStr) => {
@@ -632,14 +648,26 @@ const selectDate = async (dateStr) => {
       noteContent.value = note.content || ''
       notesMap.value[dateStr] = note.id
 
-      // 安全地处理图片，即使图片处理失败也不影响文字显示
+      // 安全地处理图片，转换为 base64 以解决 Android 兼容性问题
       try {
         if (note.media && note.media.length > 0) {
-          currentImages.value = note.media.map(filename => ({
+          // 先设置原始 URL，然后异步转换为 base64
+          const imageUrls = note.media.map(filename => pb.files.getURL(note, filename))
+          currentImages.value = imageUrls.map(url => ({
             file: null,
-            url: pb.files.getURL(note, filename),
-            existing: filename
+            url: url,
+            existing: true,
+            loading: true
           }))
+          
+          // 异步转换为 base64
+          for (let i = 0; i < imageUrls.length; i++) {
+            const base64 = await fetchImageAsBase64(imageUrls[i])
+            if (base64 && currentImages.value[i]) {
+              currentImages.value[i].url = base64
+              currentImages.value[i].loading = false
+            }
+          }
         }
       } catch (imgErr) {
         log('图片处理失败: ' + imgErr.message)

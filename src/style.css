@@ -3,10 +3,12 @@
 @tailwind utilities;
 
 @keyframes gradient-shift {
+
     0%,
     100% {
         background-position: 0% 50%;
     }
+
     50% {
         background-position: 100% 50%;
     }
@@ -99,6 +101,7 @@ body {
 
 /* 移动端基础字体调整 */
 @media (max-width: 640px) {
+
     /* 调整容器内边距 */
     .container {
         padding-left: 12px !important;
@@ -241,6 +244,7 @@ body {
 
 /* 弹窗移动端优化 */
 @media (max-width: 640px) {
+
     /* 设置弹窗 */
     .fixed.inset-0 .glass.rounded-3xl.p-6,
     .fixed.inset-0 .relative.glass.rounded-3xl.p-6 {
@@ -362,8 +366,8 @@ body {
     opacity: 0;
 }
 
-.slide-enter-from > div:last-child,
-.slide-leave-to > div:last-child {
+.slide-enter-from>div:last-child,
+.slide-leave-to>div:last-child {
     transform: translateX(100%);
 }
 
@@ -375,4 +379,170 @@ body {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+/* === 增强动画效果 === */
+
+/* 页面加载淡入 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* 卡片悬停效果 */
+.glass,
+.glass-light {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass:hover,
+.glass-light:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* 日历日期点击效果 */
+.aspect-square {
+    transition: all 0.15s ease;
+}
+
+.aspect-square:active {
+    transform: scale(0.95);
+}
+
+/* 按钮点击动画 */
+button {
+    transition: all 0.15s ease;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+/* 图片加载动画 */
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+
+    100% {
+        background-position: 200px 0;
+    }
+}
+
+.image-preview img {
+    transition: opacity 0.3s ease;
+}
+
+.image-preview img[loading="true"] {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* 图片加载淡入 */
+.image-preview img {
+    animation: fadeIn 0.3s ease;
+}
+
+/* 笔记输入框动画 */
+textarea {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* 时光轴条目动画 */
+.timeline-dot {
+    animation: fadeIn 0.3s ease;
+    animation-fill-mode: both;
+}
+
+.timeline-dot:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.timeline-dot:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.timeline-dot:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.timeline-dot:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.timeline-dot:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+/* 倒计时数字动画 */
+.number-gradient {
+    transition: transform 0.3s ease;
+}
+
+/* 进度条动画 */
+.bg-gradient-to-r {
+    transition: width 0.5s ease;
+}
+
+/* Loading spinner */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* 脉冲效果 (用于状态指示器) */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.bg-green-400 {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 性能优化 */
+.gradient-bg {
+    will-change: background-position;
+}
+
+.glass,
+.glass-light {
+    will-change: transform;
+}
+
+/* GPU 加速 */
+.image-preview img,
+.number-gradient,
+button {
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
