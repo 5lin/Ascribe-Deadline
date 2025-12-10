@@ -152,7 +152,11 @@
             <!-- 图片预览 -->
             <div v-if="currentImages.length > 0" class="flex flex-wrap gap-2 mb-3">
               <div v-for="(img, idx) in currentImages" :key="idx" class="image-preview">
-                <img :src="img.url" class="w-16 h-16 object-cover rounded-lg shadow">
+                <img :src="img.url" 
+                     crossorigin="anonymous" 
+                     referrerpolicy="no-referrer"
+                     @error="handleImageError($event, img)"
+                     class="w-16 h-16 object-cover rounded-lg shadow">
                 <button v-if="currentUser" @click="removeImage(idx)"
                   class="delete-btn w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow">×</button>
               </div>
@@ -602,6 +606,13 @@ const removeImage = (idx) => {
   URL.revokeObjectURL(currentImages.value[idx].url)
   currentImages.value.splice(idx, 1)
   debounceSave()
+}
+
+// 图片加载错误处理
+const handleImageError = (event, img) => {
+  log('图片加载失败: ' + img.url)
+  // 可以设置一个占位图或隐藏
+  event.target.style.display = 'none'
 }
 
 const selectDate = async (dateStr) => {
