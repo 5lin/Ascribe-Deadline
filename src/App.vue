@@ -155,9 +155,10 @@
                 <img :src="img.url" 
                      crossorigin="anonymous" 
                      referrerpolicy="no-referrer"
+                     @click="previewImage(img.url)"
                      @error="handleImageError($event, img)"
-                     class="w-16 h-16 object-cover rounded-lg shadow">
-                <button v-if="currentUser" @click="removeImage(idx)"
+                     class="w-16 h-16 object-cover rounded-lg shadow cursor-pointer hover:opacity-80 transition">
+                <button v-if="currentUser" @click.stop="removeImage(idx)"
                   class="delete-btn w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow">×</button>
               </div>
             </div>
