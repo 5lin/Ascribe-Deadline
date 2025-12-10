@@ -702,7 +702,7 @@ const selectDate = async (dateStr) => {
       try {
         if (note.media && note.media.length > 0) {
           // 先设置原始 URL，然后异步转换为 base64
-          const imageUrls = note.media.map(filename => pb.files.getURL(note, filename))
+          const imageUrls = note.media.map(filename => pb.files.getUrl(note, filename))
           currentImages.value = imageUrls.map(url => ({
             file: null,
             url: url,
@@ -835,7 +835,7 @@ const loadAllNotes = async () => {
       id: r.id,
       date: r.date,
       content: r.content,
-      images: r.media ? r.media.map(f => pb.files.getURL(r, f)) : []
+      images: r.media ? r.media.map(f => pb.files.getUrl(r, f)) : []
     }))
 
     notesMap.value = {}
