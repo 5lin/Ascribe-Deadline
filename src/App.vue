@@ -37,7 +37,7 @@
           <div class="absolute -top-20 -right-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl"></div>
           <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
-          <div class="relative z-10 flex justify-between items-start">
+          <div class="relative z-10">
             <div>
               <div class="text-xs tracking-[0.2em] text-indigo-300 uppercase mb-2 font-semibold">
                 {{ countdownTitle }}
@@ -46,13 +46,6 @@
                 {{ targetDateDisplay }}
               </div>
             </div>
-            <button @click="showSettings = true" class="p-2 hover:bg-white/10 rounded-lg transition" title="设置目标日期">
-              <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
           </div>
 
           <div class="relative z-10 py-12">
@@ -103,11 +96,6 @@
                 class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-sm font-semibold transition-all"
                 title="数据统计">
                 📊
-              </button>
-              <button @click="exportData"
-                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-sm font-semibold transition-all"
-                title="导出备份">
-                📤
               </button>
               <button @click="showTimeline = true"
                 class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-sm font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
@@ -255,47 +243,6 @@
       <span>{{ connected ? '云端同步' : '本地模式' }}</span>
     </div>
 
-    <!-- 设置弹窗 -->
-    <Transition name="fade">
-      <div v-if="showSettings" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div @click="showSettings = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-        <div class="relative glass rounded-3xl p-6 w-full max-w-md">
-          <h3 class="text-xl font-bold mb-6">⚙️ 倒计时设置</h3>
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm text-indigo-200 mb-2">自定义标题 (留空则自动生成)</label>
-              <input v-model="editGoalTitle" type="text" placeholder="例如：我的目标倒计时"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 outline-none focus:border-indigo-400 transition">
-            </div>
-
-            <div>
-              <label class="block text-sm text-indigo-200 mb-2">目标日期</label>
-              <input v-model="editTargetDate" type="date"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white outline-none focus:border-indigo-400 transition">
-            </div>
-
-            <div>
-              <label class="block text-sm text-indigo-200 mb-2">起始日期 (用于计算进度)</label>
-              <input v-model="editStartDate" type="date"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white outline-none focus:border-indigo-400 transition">
-            </div>
-          </div>
-
-          <div class="flex gap-3 mt-6">
-            <button @click="showSettings = false"
-              class="flex-1 py-3 bg-white/10 rounded-xl font-medium hover:bg-white/20 transition">
-              取消
-            </button>
-            <button @click="saveSettings"
-              class="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl font-semibold hover:shadow-lg transition">
-              保存
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
     <!-- 登录弹窗 -->
     <Transition name="fade">
       <div v-if="showLoginModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -396,14 +343,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </Transition>
-
-    <!-- 导出成功提示 -->
-    <Transition name="fade">
-      <div v-if="exportSuccess" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[100] 
-                                        px-6 py-3 bg-green-500 text-white rounded-full shadow-lg text-sm font-medium">
-        ✅ 数据已导出到剪贴板
       </div>
     </Transition>
   </div>
@@ -539,16 +478,11 @@ const logout = () => {
   log('已退出登录')
 }
 
-// === 倒计时设置 ===
-const showSettings = ref(false)
+// === 倒计时设置 (只读，从云端获取) ===
 const targetDateStr = ref(localStorage.getItem('targetDate') || '2026-12-12')
 const startDateStr = ref(localStorage.getItem('startDate') || '2025-01-01')
 const goalTitle = ref(localStorage.getItem('goalTitle') || '')
 const settingsId = ref(null)
-
-const editTargetDate = ref('')
-const editStartDate = ref('')
-const editGoalTitle = ref('')
 
 const loadSettings = async () => {
   try {
@@ -580,45 +514,6 @@ const loadSettings = async () => {
     // 加载失败时也同步本地设置到 Widget
     await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
   }
-}
-
-const saveSettings = async () => {
-  targetDateStr.value = editTargetDate.value
-  startDateStr.value = editStartDate.value
-  goalTitle.value = editGoalTitle.value
-
-  localStorage.setItem('targetDate', targetDateStr.value)
-  localStorage.setItem('startDate', startDateStr.value)
-  localStorage.setItem('goalTitle', goalTitle.value)
-
-  if (connected.value && currentUser.value) {
-    try {
-      const data = {
-        user: currentUser.value.id,
-        targetDate: targetDateStr.value,
-        startDate: startDateStr.value,
-        goalTitle: goalTitle.value
-      }
-
-      if (settingsId.value) {
-        await pb.collection('settings').update(settingsId.value, data)
-        log('设置已同步 (更新)')
-      } else {
-        const record = await pb.collection('settings').create(data)
-        settingsId.value = record.id
-        log('设置已同步 (创建)')
-      }
-    } catch (err) {
-      log('同步设置失败: ' + err.message)
-    }
-  } else {
-    log('设置已保存 (本地)')
-  }
-
-  // 同步到 Android Widget
-  await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
-
-  showSettings.value = false
 }
 
 const countdownTitle = computed(() => {
@@ -1090,96 +985,6 @@ const stats = computed(() => {
     monthWords
   }
 })
-
-// === 导出备份 ===
-const exportSuccess = ref(false)
-
-const exportData = async () => {
-  // 生成 Markdown 格式
-  const today = new Date().toISOString().split('T')[0]
-  let markdown = `# 倒计时笔记备份\n\n`
-  markdown += `导出时间: ${today}\n\n`
-  markdown += `---\n\n`
-  markdown += `## ⚙️ 设置\n\n`
-  markdown += `- **目标日期**: ${targetDateStr.value}\n`
-  markdown += `- **开始日期**: ${startDateStr.value}\n`
-  markdown += `- **标题**: ${goalTitle.value || '倒计时'}\n\n`
-  markdown += `---\n\n`
-  markdown += `## 📊 统计\n\n`
-  markdown += `- 总笔记数: ${stats.value.totalNotes}\n`
-  markdown += `- 总字数: ${stats.value.totalWords}\n`
-  markdown += `- 连续记录: ${stats.value.streak} 天\n`
-  markdown += `- 平均每篇: ${stats.value.avgWords} 字\n\n`
-  markdown += `---\n\n`
-  markdown += `## 📝 笔记\n\n`
-  
-  // 按日期排序的笔记
-  const sortedNotes = [...allNotes.value].sort((a, b) => b.date.localeCompare(a.date))
-  for (const note of sortedNotes) {
-    markdown += `### ${note.date}\n\n`
-    markdown += `${note.content || '(无内容)'}\n\n`
-    if (note.images && note.images.length > 0) {
-      markdown += `*附图: ${note.images.length} 张*\n\n`
-    }
-  }
-  
-  try {
-    // 在 Android 上优先使用 Web Share API
-    if (navigator.share && navigator.canShare) {
-      try {
-        const file = new File([markdown], `countdown-backup-${today}.md`, {
-          type: 'text/markdown'
-        })
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: '倒计时笔记备份',
-            text: '我的倒计时笔记数据备份',
-            files: [file]
-          })
-          log('数据已通过分享导出')
-          exportSuccess.value = true
-          setTimeout(() => { exportSuccess.value = false }, 3000)
-          return
-        }
-      } catch (e) {
-        log('文件分享不支持: ' + e.message)
-      }
-    }
-  } catch (shareErr) {
-    log('分享失败: ' + shareErr.message)
-  }
-  
-  try {
-    // 尝试复制到剪贴板
-    await navigator.clipboard.writeText(markdown)
-    exportSuccess.value = true
-    setTimeout(() => { exportSuccess.value = false }, 3000)
-    log('Markdown 已复制到剪贴板')
-  } catch (err) {
-    // 如果剪贴板不可用，尝试下载文件
-    try {
-      const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `countdown-backup-${today}.md`
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      setTimeout(() => {
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }, 100)
-      log('Markdown 已下载为文件')
-      exportSuccess.value = true
-      setTimeout(() => { exportSuccess.value = false }, 3000)
-    } catch (downloadErr) {
-      // 最后的 fallback: 显示数据让用户手动复制
-      alert('导出数据 (请手动复制):\n\n' + markdown.substring(0, 500) + '...')
-      log('显示导出数据供手动复制')
-    }
-  }
-}
 
 // === 初始化 ===
 onMounted(async () => {
