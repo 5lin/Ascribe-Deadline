@@ -55,10 +55,7 @@ jobs:
         mkdir -p android/app/src/main/res/drawable
         mkdir -p android/app/src/main/res/values
         
-        # 复制启动画面资源
-        if [ -f android-resources/splash.xml ]; then
-          cp android-resources/splash.xml android/app/src/main/res/drawable/splash.xml
-        fi
+        # 注意: 不复制 splash.xml，因为 Capacitor 已经有默认的 splash.png
         
         # 复制颜色资源（追加到 colors.xml）
         if [ -f android-resources/colors.xml ]; then
