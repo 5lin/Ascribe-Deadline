@@ -432,30 +432,32 @@ const log = (msg) => {
 
 // === Android Widget 同步 ===
 // 将设置同步到 Android SharedPreferences，供 Widget 读取
-const syncToAndroidWidget = async (targetDate, goalTitle) => {
+const syncToAndroidWidget = async (targetDate, startDate, goalTitle) => {
   try {
     // 检查是否在 Android 环境
     if (window.Android && window.Android.saveWidgetData) {
       // 自定义 Android 接口 (需要原生支持)
-      window.Android.saveWidgetData(targetDate, goalTitle)
+      window.Android.saveWidgetData(targetDate, startDate, goalTitle)
       log('已同步到 Android Widget')
     } else if (window.Capacitor) {
       // 使用 Capacitor Preferences 插件 (如果可用)
-      // 这是一个运行时检查，不需要导入
       try {
         const { Preferences } = await import('@capacitor/preferences')
         await Preferences.set({ key: 'widget_targetDate', value: targetDate })
+        await Preferences.set({ key: 'widget_startDate', value: startDate })
         await Preferences.set({ key: 'widget_goalTitle', value: goalTitle || '倒计时' })
         log('已通过 Capacitor 同步到 Widget')
       } catch (e) {
         // Preferences 插件未安装，使用 localStorage 作为 fallback
         localStorage.setItem('widget_targetDate', targetDate)
+        localStorage.setItem('widget_startDate', startDate)
         localStorage.setItem('widget_goalTitle', goalTitle || '倒计时')
         log('Widget 数据已保存到 localStorage')
       }
     } else {
       // 非 Android 环境，仅保存到 localStorage
       localStorage.setItem('widget_targetDate', targetDate)
+      localStorage.setItem('widget_startDate', startDate)
       localStorage.setItem('widget_goalTitle', goalTitle || '倒计时')
     }
   } catch (err) {
@@ -565,18 +567,18 @@ const loadSettings = async () => {
       localStorage.setItem('goalTitle', goalTitle.value)
       
       // 从云端加载后同步到 Widget
-      await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
+      await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
       
       log('已加载云端设置')
     } else {
       log('未找到云端设置，使用本地')
       // 即使是本地设置，也同步到 Widget
-      await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
+      await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
     }
   } catch (err) {
     log('加载设置: ' + err.message)
     // 加载失败时也同步本地设置到 Widget
-    await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
+    await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
   }
 }
 
@@ -614,7 +616,7 @@ const saveSettings = async () => {
   }
 
   // 同步到 Android Widget
-  await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
+  await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
 
   showSettings.value = false
 }
@@ -1093,38 +1095,55 @@ const stats = computed(() => {
 const exportSuccess = ref(false)
 
 const exportData = async () => {
-  const data = {
-    exportDate: new Date().toISOString(),
-    settings: {
-      targetDate: targetDateStr.value,
-      startDate: startDateStr.value,
-      goalTitle: goalTitle.value
-    },
-    notes: allNotes.value.map(n => ({
-      date: n.date,
-      content: n.content,
-      images: n.images
-    })),
-    stats: stats.value
-  }
+  // 生成 Markdown 格式
+  const today = new Date().toISOString().split('T')[0]
+  let markdown = `# 倒计时笔记备份\n\n`
+  markdown += `导出时间: ${today}\n\n`
+  markdown += `---\n\n`
+  markdown += `## ⚙️ 设置\n\n`
+  markdown += `- **目标日期**: ${targetDateStr.value}\n`
+  markdown += `- **开始日期**: ${startDateStr.value}\n`
+  markdown += `- **标题**: ${goalTitle.value || '倒计时'}\n\n`
+  markdown += `---\n\n`
+  markdown += `## 📊 统计\n\n`
+  markdown += `- 总笔记数: ${stats.value.totalNotes}\n`
+  markdown += `- 总字数: ${stats.value.totalWords}\n`
+  markdown += `- 连续记录: ${stats.value.streak} 天\n`
+  markdown += `- 平均每篇: ${stats.value.avgWords} 字\n\n`
+  markdown += `---\n\n`
+  markdown += `## 📝 笔记\n\n`
   
-  const jsonStr = JSON.stringify(data, null, 2)
+  // 按日期排序的笔记
+  const sortedNotes = [...allNotes.value].sort((a, b) => b.date.localeCompare(a.date))
+  for (const note of sortedNotes) {
+    markdown += `### ${note.date}\n\n`
+    markdown += `${note.content || '(无内容)'}\n\n`
+    if (note.images && note.images.length > 0) {
+      markdown += `*附图: ${note.images.length} 张*\n\n`
+    }
+  }
   
   try {
     // 在 Android 上优先使用 Web Share API
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [] })) {
-      const file = new File([jsonStr], `countdown-backup-${new Date().toISOString().split('T')[0]}.json`, {
-        type: 'application/json'
-      })
-      await navigator.share({
-        title: '倒计时笔记备份',
-        text: '我的倒计时笔记数据备份',
-        files: [file]
-      })
-      log('数据已通过分享导出')
-      exportSuccess.value = true
-      setTimeout(() => { exportSuccess.value = false }, 3000)
-      return
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([markdown], `countdown-backup-${today}.md`, {
+          type: 'text/markdown'
+        })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: '倒计时笔记备份',
+            text: '我的倒计时笔记数据备份',
+            files: [file]
+          })
+          log('数据已通过分享导出')
+          exportSuccess.value = true
+          setTimeout(() => { exportSuccess.value = false }, 3000)
+          return
+        }
+      } catch (e) {
+        log('文件分享不支持: ' + e.message)
+      }
     }
   } catch (shareErr) {
     log('分享失败: ' + shareErr.message)
@@ -1132,18 +1151,18 @@ const exportData = async () => {
   
   try {
     // 尝试复制到剪贴板
-    await navigator.clipboard.writeText(jsonStr)
+    await navigator.clipboard.writeText(markdown)
     exportSuccess.value = true
     setTimeout(() => { exportSuccess.value = false }, 3000)
-    log('数据已导出到剪贴板')
+    log('Markdown 已复制到剪贴板')
   } catch (err) {
     // 如果剪贴板不可用，尝试下载文件
     try {
-      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const blob = new Blob([markdown], { type: 'text/markdown' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `countdown-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.download = `countdown-backup-${today}.md`
       a.style.display = 'none'
       document.body.appendChild(a)
       a.click()
@@ -1151,13 +1170,16 @@ const exportData = async () => {
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       }, 100)
-      log('数据已下载为文件')
+      log('Markdown 已下载为文件')
       exportSuccess.value = true
       setTimeout(() => { exportSuccess.value = false }, 3000)
     } catch (downloadErr) {
       // 最后的 fallback: 显示数据让用户手动复制
-      alert('导出数据 (请手动复制):\n\n' + jsonStr.substring(0, 500) + '...')
+      alert('导出数据 (请手动复制):\n\n' + markdown.substring(0, 500) + '...')
       log('显示导出数据供手动复制')
+    }
+  }
+}
     }
   }
 }

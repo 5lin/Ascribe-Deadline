@@ -17,9 +17,8 @@ public class CountdownWidget extends AppWidgetProvider {
 
     // Capacitor Preferences 使用的 SharedPreferences 名称
     private static final String CAPACITOR_PREFS_NAME = "CapacitorStorage";
-    // Widget 自己的备用存储
-    private static final String WIDGET_PREFS_NAME = "CountdownWidgetPrefs";
     private static final String DEFAULT_TARGET_DATE = "2026-12-12";
+    private static final String DEFAULT_START_DATE = "2025-01-01";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -30,35 +29,40 @@ public class CountdownWidget extends AppWidgetProvider {
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         String targetDateStr = DEFAULT_TARGET_DATE;
+        String startDateStr = DEFAULT_START_DATE;
         String goalTitle = "倒计时";
 
-        // 首先尝试从 Capacitor Preferences 读取
+        // 从 Capacitor Preferences 读取
         SharedPreferences capacitorPrefs = context.getSharedPreferences(CAPACITOR_PREFS_NAME, Context.MODE_PRIVATE);
         String capTargetDate = capacitorPrefs.getString("widget_targetDate", null);
+        String capStartDate = capacitorPrefs.getString("widget_startDate", null);
         String capGoalTitle = capacitorPrefs.getString("widget_goalTitle", null);
 
         if (capTargetDate != null && !capTargetDate.isEmpty()) {
             targetDateStr = capTargetDate;
         }
+        if (capStartDate != null && !capStartDate.isEmpty()) {
+            startDateStr = capStartDate;
+        }
         if (capGoalTitle != null && !capGoalTitle.isEmpty()) {
             goalTitle = capGoalTitle;
         }
 
-        // 如果 Capacitor 没有数据，尝试从 Widget 自己的存储读取
-        if (capTargetDate == null) {
-            SharedPreferences widgetPrefs = context.getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE);
-            targetDateStr = widgetPrefs.getString("targetDate", DEFAULT_TARGET_DATE);
-            goalTitle = widgetPrefs.getString("goalTitle", "倒计时");
-        }
-
         // 计算剩余天数
         long daysRemaining = calculateDaysRemaining(targetDateStr);
+        
+        // 计算进度百分比
+        int progressPercent = calculateProgress(startDateStr, targetDateStr);
 
         // 创建 RemoteViews
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_countdown);
         views.setTextViewText(R.id.widget_title, goalTitle);
         views.setTextViewText(R.id.widget_days, String.valueOf(Math.max(0, daysRemaining)));
         views.setTextViewText(R.id.widget_date, "目标: " + targetDateStr);
+        
+        // 设置进度条
+        views.setProgressBar(R.id.widget_progress, 100, progressPercent, false);
+        views.setTextViewText(R.id.widget_progress_text, String.format("%.1f%%", (float) progressPercent));
 
         // 点击打开应用
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -88,6 +92,28 @@ public class CountdownWidget extends AppWidgetProvider {
         return 0;
     }
 
+    private static int calculateProgress(String startDateStr, String targetDateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date startDate = sdf.parse(startDateStr);
+            Date targetDate = sdf.parse(targetDateStr);
+            Date today = new Date();
+            
+            if (startDate != null && targetDate != null) {
+                long totalTime = targetDate.getTime() - startDate.getTime();
+                long elapsedTime = today.getTime() - startDate.getTime();
+                
+                if (totalTime > 0) {
+                    double progress = (double) elapsedTime / totalTime * 100;
+                    return (int) Math.min(Math.max(progress, 0), 100);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     @Override
     public void onEnabled(Context context) {
         // 小组件首次添加时调用
@@ -98,4 +124,5 @@ public class CountdownWidget extends AppWidgetProvider {
         // 所有小组件实例被删除时调用
     }
 }
+
 

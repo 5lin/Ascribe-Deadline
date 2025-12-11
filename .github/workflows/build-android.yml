@@ -96,6 +96,10 @@ jobs:
           cp android-resources/widget_background.xml android/app/src/main/res/drawable/widget_background.xml
         fi
         
+        if [ -f android-resources/widget_progress_drawable.xml ]; then
+          cp android-resources/widget_progress_drawable.xml android/app/src/main/res/drawable/widget_progress_drawable.xml
+        fi
+        
         # 追加 Widget 字符串到 strings.xml
         if [ -f android-resources/widget_strings.xml ]; then
           if [ -f android/app/src/main/res/values/strings.xml ]; then
