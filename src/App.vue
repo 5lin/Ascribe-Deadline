@@ -1180,9 +1180,6 @@ const exportData = async () => {
     }
   }
 }
-    }
-  }
-}
 
 // === 初始化 ===
 onMounted(async () => {
