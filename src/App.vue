@@ -699,9 +699,28 @@ const selectDate = async (dateStr) => {
   currentImages.value = []
   saveStatus.value = ''
 
-  // 始终尝试从云端加载（公开读取）
+  // 首先检查是否已经在 allNotes 中有数据（避免重复请求）
+  const cachedNote = allNotes.value.find(n => n.date === dateStr)
+  if (cachedNote) {
+    noteContent.value = cachedNote.content || ''
+    notesMap.value[dateStr] = cachedNote.id
+    
+    // 处理缓存的图片
+    if (cachedNote.images && cachedNote.images.length > 0) {
+      currentImages.value = cachedNote.images.map(url => ({
+        file: null,
+        url: url,
+        existing: true,
+        loading: false
+      }))
+    }
+    log('从缓存加载笔记: ' + dateStr)
+    return
+  }
+
+  // 如果缓存中没有，尝试从云端加载
   try {
-    log('加载笔记: ' + dateStr)
+    log('从云端加载笔记: ' + dateStr)
     const records = await pb.collection(COLLECTION).getList(1, 1, {
       filter: `date = "${dateStr}"`
     })
