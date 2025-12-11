@@ -15,9 +15,10 @@ import java.util.concurrent.TimeUnit;
 
 public class CountdownWidget extends AppWidgetProvider {
 
-    private static final String PREFS_NAME = "CountdownWidgetPrefs";
-    private static final String PREF_TARGET_DATE = "targetDate";
-    private static final String PREF_GOAL_TITLE = "goalTitle";
+    // Capacitor Preferences 使用的 SharedPreferences 名称
+    private static final String CAPACITOR_PREFS_NAME = "CapacitorStorage";
+    // Widget 自己的备用存储
+    private static final String WIDGET_PREFS_NAME = "CountdownWidgetPrefs";
     private static final String DEFAULT_TARGET_DATE = "2026-12-12";
 
     @Override
@@ -28,9 +29,27 @@ public class CountdownWidget extends AppWidgetProvider {
     }
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String targetDateStr = prefs.getString(PREF_TARGET_DATE, DEFAULT_TARGET_DATE);
-        String goalTitle = prefs.getString(PREF_GOAL_TITLE, "倒计时");
+        String targetDateStr = DEFAULT_TARGET_DATE;
+        String goalTitle = "倒计时";
+
+        // 首先尝试从 Capacitor Preferences 读取
+        SharedPreferences capacitorPrefs = context.getSharedPreferences(CAPACITOR_PREFS_NAME, Context.MODE_PRIVATE);
+        String capTargetDate = capacitorPrefs.getString("widget_targetDate", null);
+        String capGoalTitle = capacitorPrefs.getString("widget_goalTitle", null);
+
+        if (capTargetDate != null && !capTargetDate.isEmpty()) {
+            targetDateStr = capTargetDate;
+        }
+        if (capGoalTitle != null && !capGoalTitle.isEmpty()) {
+            goalTitle = capGoalTitle;
+        }
+
+        // 如果 Capacitor 没有数据，尝试从 Widget 自己的存储读取
+        if (capTargetDate == null) {
+            SharedPreferences widgetPrefs = context.getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE);
+            targetDateStr = widgetPrefs.getString("targetDate", DEFAULT_TARGET_DATE);
+            goalTitle = widgetPrefs.getString("goalTitle", "倒计时");
+        }
 
         // 计算剩余天数
         long daysRemaining = calculateDaysRemaining(targetDateStr);
@@ -38,7 +57,7 @@ public class CountdownWidget extends AppWidgetProvider {
         // 创建 RemoteViews
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_countdown);
         views.setTextViewText(R.id.widget_title, goalTitle);
-        views.setTextViewText(R.id.widget_days, String.valueOf(daysRemaining));
+        views.setTextViewText(R.id.widget_days, String.valueOf(Math.max(0, daysRemaining)));
         views.setTextViewText(R.id.widget_date, "目标: " + targetDateStr);
 
         // 点击打开应用
@@ -79,3 +98,4 @@ public class CountdownWidget extends AppWidgetProvider {
         // 所有小组件实例被删除时调用
     }
 }
+

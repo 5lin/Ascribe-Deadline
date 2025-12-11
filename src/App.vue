@@ -430,6 +430,39 @@ const log = (msg) => {
   if (debugLogs.value.length > 20) debugLogs.value.pop()
 }
 
+// === Android Widget 同步 ===
+// 将设置同步到 Android SharedPreferences，供 Widget 读取
+const syncToAndroidWidget = async (targetDate, goalTitle) => {
+  try {
+    // 检查是否在 Android 环境
+    if (window.Android && window.Android.saveWidgetData) {
+      // 自定义 Android 接口 (需要原生支持)
+      window.Android.saveWidgetData(targetDate, goalTitle)
+      log('已同步到 Android Widget')
+    } else if (window.Capacitor) {
+      // 使用 Capacitor Preferences 插件 (如果可用)
+      // 这是一个运行时检查，不需要导入
+      try {
+        const { Preferences } = await import('@capacitor/preferences')
+        await Preferences.set({ key: 'widget_targetDate', value: targetDate })
+        await Preferences.set({ key: 'widget_goalTitle', value: goalTitle || '倒计时' })
+        log('已通过 Capacitor 同步到 Widget')
+      } catch (e) {
+        // Preferences 插件未安装，使用 localStorage 作为 fallback
+        localStorage.setItem('widget_targetDate', targetDate)
+        localStorage.setItem('widget_goalTitle', goalTitle || '倒计时')
+        log('Widget 数据已保存到 localStorage')
+      }
+    } else {
+      // 非 Android 环境，仅保存到 localStorage
+      localStorage.setItem('widget_targetDate', targetDate)
+      localStorage.setItem('widget_goalTitle', goalTitle || '倒计时')
+    }
+  } catch (err) {
+    log('同步 Widget 失败: ' + err.message)
+  }
+}
+
 // === 认证相关 ===
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
@@ -571,6 +604,9 @@ const saveSettings = async () => {
   } else {
     log('设置已保存 (本地)')
   }
+
+  // 同步到 Android Widget
+  await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
 
   showSettings.value = false
 }
@@ -1067,6 +1103,26 @@ const exportData = async () => {
   const jsonStr = JSON.stringify(data, null, 2)
   
   try {
+    // 在 Android 上优先使用 Web Share API
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [] })) {
+      const file = new File([jsonStr], `countdown-backup-${new Date().toISOString().split('T')[0]}.json`, {
+        type: 'application/json'
+      })
+      await navigator.share({
+        title: '倒计时笔记备份',
+        text: '我的倒计时笔记数据备份',
+        files: [file]
+      })
+      log('数据已通过分享导出')
+      exportSuccess.value = true
+      setTimeout(() => { exportSuccess.value = false }, 3000)
+      return
+    }
+  } catch (shareErr) {
+    log('分享失败: ' + shareErr.message)
+  }
+  
+  try {
     // 尝试复制到剪贴板
     await navigator.clipboard.writeText(jsonStr)
     exportSuccess.value = true
@@ -1074,16 +1130,27 @@ const exportData = async () => {
     log('数据已导出到剪贴板')
   } catch (err) {
     // 如果剪贴板不可用，尝试下载文件
-    const blob = new Blob([jsonStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `countdown-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    log('数据已下载为文件')
+    try {
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `countdown-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }, 100)
+      log('数据已下载为文件')
+      exportSuccess.value = true
+      setTimeout(() => { exportSuccess.value = false }, 3000)
+    } catch (downloadErr) {
+      // 最后的 fallback: 显示数据让用户手动复制
+      alert('导出数据 (请手动复制):\n\n' + jsonStr.substring(0, 500) + '...')
+      log('显示导出数据供手动复制')
+    }
   }
 }
 
