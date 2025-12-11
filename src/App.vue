@@ -116,11 +116,12 @@
                 'hover:bg-slate-100': day.date,
                 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30': day.isToday,
                 'ring-2 ring-indigo-400 bg-indigo-50': day.date === selectedDate && !day.isToday,
-                'text-slate-300 cursor-default': !day.date
+                'text-slate-300 cursor-default': !day.date,
+                'bg-rose-50': notesMap[day.date] && !day.isToday && day.date !== selectedDate
               }">
               <span>{{ day.day }}</span>
-              <div v-if="notesMap[day.date]" class="w-1.5 h-1.5 rounded-full mt-1"
-                :class="day.isToday ? 'bg-white' : 'bg-rose-400'"></div>
+              <div v-if="notesMap[day.date]" class="w-2 h-2 rounded-full mt-1"
+                :class="day.isToday ? 'bg-white' : 'bg-rose-500'"></div>
             </div>
           </div>
 
@@ -991,11 +992,6 @@ onMounted(async () => {
   updateTimer()
   setInterval(updateTimer, 1000)
 
-  // 初始化编辑值
-  editTargetDate.value = targetDateStr.value
-  editStartDate.value = startDateStr.value
-  editGoalTitle.value = goalTitle.value
-
   // 先检查登录状态
   if (pb.authStore.isValid) {
     currentUser.value = pb.authStore.model
@@ -1004,7 +1000,7 @@ onMounted(async () => {
     log('已恢复登录: ' + currentUser.value.email)
   }
 
-  // 先加载设置和所有笔记
+  // 自动从云端加载设置和笔记
   await loadSettings()
   await loadAllNotes()
   
