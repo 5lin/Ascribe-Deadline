@@ -359,15 +359,8 @@ const COLLECTION = 'notes'
 const pb = new PocketBase(PB_URL)
 const connected = ref(false)
 
-// 调试日志（可在界面上显示）
-const debugLogs = ref([])
-const showDebugPanel = ref(false)
-
 const log = (msg) => {
-  const logEntry = `[${new Date().toLocaleTimeString()}] ${msg}`
-  console.log(logEntry)
-  debugLogs.value.unshift(logEntry)
-  if (debugLogs.value.length > 20) debugLogs.value.pop()
+  console.log(`[${new Date().toLocaleTimeString()}] ${msg}`)
 }
 
 // === Android Widget 同步 ===
@@ -410,7 +403,6 @@ const isLoggedIn = ref(false)
 const currentUser = ref(null)
 const authLoading = ref(false)
 const authError = ref('')
-const showRegister = ref(false)
 const showLoginModal = ref(false)
 const loginForm = ref({ email: '', password: '' })
 const registerForm = ref({ email: '', password: '', passwordConfirm: '' })
