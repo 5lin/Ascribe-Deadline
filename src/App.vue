@@ -563,12 +563,20 @@ const loadSettings = async () => {
       localStorage.setItem('targetDate', targetDateStr.value)
       localStorage.setItem('startDate', startDateStr.value)
       localStorage.setItem('goalTitle', goalTitle.value)
+      
+      // 从云端加载后同步到 Widget
+      await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
+      
       log('已加载云端设置')
     } else {
       log('未找到云端设置，使用本地')
+      // 即使是本地设置，也同步到 Widget
+      await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
     }
   } catch (err) {
     log('加载设置: ' + err.message)
+    // 加载失败时也同步本地设置到 Widget
+    await syncToAndroidWidget(targetDateStr.value, goalTitle.value)
   }
 }
 
