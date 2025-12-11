@@ -37,7 +37,7 @@
           <div class="absolute -top-20 -right-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl"></div>
           <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
-          <div class="relative z-10">
+          <div class="relative z-10 flex justify-between items-start">
             <div>
               <div class="text-xs tracking-[0.2em] text-indigo-300 uppercase mb-2 font-semibold">
                 {{ countdownTitle }}
@@ -46,6 +46,15 @@
                 {{ targetDateDisplay }}
               </div>
             </div>
+            <button v-if="currentUser" @click="openSettings" class="p-2 hover:bg-white/10 rounded-lg transition"
+              title="设置">
+              <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
           </div>
 
           <div class="relative z-10 py-12">
@@ -243,6 +252,49 @@
       <div class="w-2 h-2 rounded-full" :class="connected ? 'bg-green-400' : 'bg-yellow-400'"></div>
       <span>{{ connected ? '云端同步' : '本地模式' }}</span>
     </div>
+
+    <!-- 设置弹窗 -->
+    <Transition name="fade">
+      <div v-if="showSettings" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div @click="showSettings = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="relative glass rounded-3xl p-6 w-full max-w-md">
+          <h3 class="text-xl font-bold mb-6">⚙️ 倒计时设置</h3>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-indigo-200 mb-2">倒计时标题</label>
+              <input v-model="editGoalTitle" type="text" placeholder="例如：生日 / 纪念日 / 项目截止"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 outline-none focus:border-indigo-400 transition">
+            </div>
+
+            <div>
+              <label class="block text-sm text-indigo-200 mb-2">目标日期 (结束)</label>
+              <input v-model="editTargetDate" type="date"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white outline-none focus:border-indigo-400 transition"
+                style="color-scheme: dark;">
+            </div>
+
+            <div>
+              <label class="block text-sm text-indigo-200 mb-2">起始日期 (开始)</label>
+              <input v-model="editStartDate" type="date"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white outline-none focus:border-indigo-400 transition"
+                style="color-scheme: dark;">
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button @click="showSettings = false"
+              class="flex-1 py-3 bg-white/10 rounded-xl font-medium hover:bg-white/20 transition">
+              取消
+            </button>
+            <button @click="saveSettings"
+              class="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl font-semibold hover:shadow-lg transition">
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 登录弹窗 -->
     <Transition name="fade">
@@ -507,6 +559,58 @@ const loadSettings = async () => {
     // 加载失败时也同步本地设置到 Widget
     await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
   }
+}
+
+const showSettings = ref(false)
+const editGoalTitle = ref('')
+const editTargetDate = ref('')
+const editStartDate = ref('')
+
+const openSettings = () => {
+  editGoalTitle.value = goalTitle.value
+  editTargetDate.value = targetDateStr.value
+  editStartDate.value = startDateStr.value
+  showSettings.value = true
+}
+
+const saveSettings = async () => {
+  goalTitle.value = editGoalTitle.value
+  targetDateStr.value = editTargetDate.value
+  startDateStr.value = editStartDate.value
+
+  localStorage.setItem('targetDate', targetDateStr.value)
+  localStorage.setItem('startDate', startDateStr.value)
+  localStorage.setItem('goalTitle', goalTitle.value)
+
+  // 更新后同步到 Widget
+  await syncToAndroidWidget(targetDateStr.value, startDateStr.value, goalTitle.value)
+
+  if (connected.value && currentUser.value) {
+    try {
+      const data = {
+        targetDate: targetDateStr.value,
+        startDate: startDateStr.value,
+        goalTitle: goalTitle.value,
+        user: currentUser.value.id
+      }
+
+      if (settingsId.value) {
+        await pb.collection('settings').update(settingsId.value, data)
+      } else {
+        const record = await pb.collection('settings').create(data)
+        settingsId.value = record.id
+      }
+      log('设置已同步到云端')
+      showSettings.value = false
+    } catch (err) {
+      log('设置同步失败: ' + err.message)
+      alert('保存到云端失败，但本地已更新')
+      showSettings.value = false
+    }
+  } else {
+    showSettings.value = false
+  }
+  updateTimer()
 }
 
 const countdownTitle = computed(() => {
