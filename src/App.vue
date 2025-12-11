@@ -1,5 +1,19 @@
 <template>
-  <div class="gradient-bg min-h-screen font-sans text-white overflow-x-hidden">
+  <div class="gradient-bg min-h-screen font-sans text-white overflow-x-hidden"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd">
+    <!-- 下拉刷新指示器 -->
+    <div class="pull-refresh-indicator" :class="{ active: isPulling, refreshing: isRefreshing }" 
+         :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
+      <div class="refresh-spinner" v-if="isRefreshing">
+        <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      </div>
+      <div v-else class="text-sm text-indigo-200">
+        {{ pullDistance > 60 ? '释放刷新' : '下拉刷新' }}
+      </div>
+    </div>
+    
     <!-- 主界面 -->
     <div class="container mx-auto px-4 py-8 max-w-7xl">
       <!-- 顶部用户信息 -->
@@ -84,10 +98,22 @@
                 </svg>
               </button>
             </div>
-            <button @click="showTimeline = true"
-              class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-sm font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
-              📖 时光轴
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="showStats = true"
+                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-sm font-semibold transition-all"
+                title="数据统计">
+                📊
+              </button>
+              <button @click="exportData"
+                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-sm font-semibold transition-all"
+                title="导出备份">
+                📤
+              </button>
+              <button @click="showTimeline = true"
+                class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-sm font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+                📖 时光轴
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-7 gap-1 mb-2">
@@ -301,6 +327,83 @@
             </button>
           </div>
         </div>
+      </div>
+    </Transition>
+
+    <!-- 数据统计弹窗 -->
+    <Transition name="fade">
+      <div v-if="showStats" class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+        <div @click="showStats = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="relative glass rounded-3xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold">📊 数据统计</h3>
+            <button @click="showStats = false" class="text-white/50 hover:text-white text-xl">×</button>
+          </div>
+
+          <div class="space-y-4">
+            <!-- 总览统计 -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-white/10 rounded-2xl p-4 text-center">
+                <div class="text-3xl font-bold number-gradient">{{ stats.totalNotes }}</div>
+                <div class="text-xs text-indigo-200 mt-1">总笔记数</div>
+              </div>
+              <div class="bg-white/10 rounded-2xl p-4 text-center">
+                <div class="text-3xl font-bold number-gradient">{{ stats.totalWords }}</div>
+                <div class="text-xs text-indigo-200 mt-1">总字数</div>
+              </div>
+              <div class="bg-white/10 rounded-2xl p-4 text-center">
+                <div class="text-3xl font-bold number-gradient">{{ stats.totalImages }}</div>
+                <div class="text-xs text-indigo-200 mt-1">总图片数</div>
+              </div>
+              <div class="bg-white/10 rounded-2xl p-4 text-center">
+                <div class="text-3xl font-bold number-gradient">{{ stats.streak }}</div>
+                <div class="text-xs text-indigo-200 mt-1">连续记录天数</div>
+              </div>
+            </div>
+
+            <!-- 时间统计 -->
+            <div class="bg-white/10 rounded-2xl p-4">
+              <h4 class="text-sm font-semibold text-indigo-200 mb-3">📅 记录时间</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-indigo-300">首次记录</span>
+                  <span class="font-medium">{{ stats.firstDate || '暂无' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-indigo-300">最近记录</span>
+                  <span class="font-medium">{{ stats.lastDate || '暂无' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-indigo-300">平均每篇字数</span>
+                  <span class="font-medium">{{ stats.avgWords }} 字</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 本月统计 -->
+            <div class="bg-white/10 rounded-2xl p-4">
+              <h4 class="text-sm font-semibold text-indigo-200 mb-3">📈 本月统计</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-indigo-300">本月笔记数</span>
+                  <span class="font-medium">{{ stats.monthNotes }} 篇</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-indigo-300">本月字数</span>
+                  <span class="font-medium">{{ stats.monthWords }} 字</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 导出成功提示 -->
+    <Transition name="fade">
+      <div v-if="exportSuccess" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[100] 
+                                        px-6 py-3 bg-green-500 text-white rounded-full shadow-lg text-sm font-medium">
+        ✅ 数据已导出到剪贴板
       </div>
     </Transition>
   </div>
@@ -845,6 +948,143 @@ const previewImageUrl = ref(null)
 
 const previewImage = (url) => {
   previewImageUrl.value = url
+}
+
+// === 下拉刷新 ===
+const isPulling = ref(false)
+const isRefreshing = ref(false)
+const pullDistance = ref(0)
+let touchStartY = 0
+
+const handleTouchStart = (e) => {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY
+    isPulling.value = true
+  }
+}
+
+const handleTouchMove = (e) => {
+  if (!isPulling.value || isRefreshing.value) return
+  const touchY = e.touches[0].clientY
+  const diff = touchY - touchStartY
+  if (diff > 0 && window.scrollY === 0) {
+    pullDistance.value = diff * 0.5
+  }
+}
+
+const handleTouchEnd = async () => {
+  if (pullDistance.value > 60 && !isRefreshing.value) {
+    isRefreshing.value = true
+    await refreshData()
+    isRefreshing.value = false
+  }
+  isPulling.value = false
+  pullDistance.value = 0
+}
+
+const refreshData = async () => {
+  log('刷新数据...')
+  await loadSettings()
+  await loadAllNotes()
+  if (selectedDate.value) {
+    await selectDate(selectedDate.value)
+  }
+  log('刷新完成')
+}
+
+// === 数据统计 ===
+const showStats = ref(false)
+
+const stats = computed(() => {
+  const notes = allNotes.value
+  const totalNotes = notes.length
+  const totalWords = notes.reduce((sum, n) => sum + (n.content?.length || 0), 0)
+  const totalImages = notes.reduce((sum, n) => sum + (n.images?.length || 0), 0)
+  
+  // 计算连续记录天数
+  let streak = 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const sortedDates = notes.map(n => n.date).sort().reverse()
+  for (let i = 0; i < 365; i++) {
+    const checkDate = new Date(today)
+    checkDate.setDate(checkDate.getDate() - i)
+    const dateStr = checkDate.toISOString().split('T')[0]
+    if (sortedDates.includes(dateStr)) {
+      streak++
+    } else if (i > 0) {
+      break
+    }
+  }
+  
+  // 首次和最近记录
+  const dates = notes.map(n => n.date).sort()
+  const firstDate = dates[0] || null
+  const lastDate = dates[dates.length - 1] || null
+  
+  // 平均字数
+  const avgWords = totalNotes > 0 ? Math.round(totalWords / totalNotes) : 0
+  
+  // 本月统计
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const monthNotes = notes.filter(n => n.date?.startsWith(currentMonth))
+  const monthNotesCount = monthNotes.length
+  const monthWords = monthNotes.reduce((sum, n) => sum + (n.content?.length || 0), 0)
+  
+  return {
+    totalNotes,
+    totalWords,
+    totalImages,
+    streak,
+    firstDate,
+    lastDate,
+    avgWords,
+    monthNotes: monthNotesCount,
+    monthWords
+  }
+})
+
+// === 导出备份 ===
+const exportSuccess = ref(false)
+
+const exportData = async () => {
+  const data = {
+    exportDate: new Date().toISOString(),
+    settings: {
+      targetDate: targetDateStr.value,
+      startDate: startDateStr.value,
+      goalTitle: goalTitle.value
+    },
+    notes: allNotes.value.map(n => ({
+      date: n.date,
+      content: n.content,
+      images: n.images
+    })),
+    stats: stats.value
+  }
+  
+  const jsonStr = JSON.stringify(data, null, 2)
+  
+  try {
+    // 尝试复制到剪贴板
+    await navigator.clipboard.writeText(jsonStr)
+    exportSuccess.value = true
+    setTimeout(() => { exportSuccess.value = false }, 3000)
+    log('数据已导出到剪贴板')
+  } catch (err) {
+    // 如果剪贴板不可用，尝试下载文件
+    const blob = new Blob([jsonStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `countdown-backup-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    log('数据已下载为文件')
+  }
 }
 
 // === 初始化 ===

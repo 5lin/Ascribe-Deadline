@@ -19,6 +19,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
 
     - name: Install dependencies
       run: npm install
@@ -49,6 +50,73 @@ jobs:
         # 在 AndroidManifest.xml 中添加网络安全配置引用
         sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config" android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
 
+    - name: Configure Splash Screen resources
+      run: |
+        # 创建 drawable 目录
+        mkdir -p android/app/src/main/res/drawable
+        mkdir -p android/app/src/main/res/values
+        
+        # 复制启动画面资源
+        if [ -f android-resources/splash.xml ]; then
+          cp android-resources/splash.xml android/app/src/main/res/drawable/splash.xml
+        fi
+        
+        # 复制颜色资源（追加到 colors.xml）
+        if [ -f android-resources/colors.xml ]; then
+          if [ -f android/app/src/main/res/values/colors.xml ]; then
+            # 追加颜色定义
+            sed -i '/<\/resources>/d' android/app/src/main/res/values/colors.xml
+            grep '<color' android-resources/colors.xml >> android/app/src/main/res/values/colors.xml || true
+            echo '</resources>' >> android/app/src/main/res/values/colors.xml
+          else
+            cp android-resources/colors.xml android/app/src/main/res/values/colors.xml
+          fi
+        fi
+        
+        # 使用 ImageMagick 转换 SVG 为 PNG 作为启动图标
+        if [ -f android-resources/splash_icon.svg ]; then
+          sudo apt-get update && sudo apt-get install -y imagemagick
+          convert android-resources/splash_icon.svg -resize 192x192 android/app/src/main/res/drawable/splash_icon.png || echo "SVG 转换跳过"
+        fi
+
+    - name: Configure Widget
+      run: |
+        # 创建必要目录
+        mkdir -p android/app/src/main/res/xml
+        mkdir -p android/app/src/main/res/layout
+        mkdir -p android/app/src/main/res/drawable
+        mkdir -p android/app/src/main/java/com/countdown/app
+        
+        # 复制 Widget 资源
+        if [ -f android-resources/widget_info.xml ]; then
+          cp android-resources/widget_info.xml android/app/src/main/res/xml/widget_info.xml
+        fi
+        
+        if [ -f android-resources/widget_countdown.xml ]; then
+          cp android-resources/widget_countdown.xml android/app/src/main/res/layout/widget_countdown.xml
+        fi
+        
+        if [ -f android-resources/widget_background.xml ]; then
+          cp android-resources/widget_background.xml android/app/src/main/res/drawable/widget_background.xml
+        fi
+        
+        # 追加 Widget 字符串到 strings.xml
+        if [ -f android-resources/widget_strings.xml ]; then
+          if [ -f android/app/src/main/res/values/strings.xml ]; then
+            sed -i '/<\/resources>/d' android/app/src/main/res/values/strings.xml
+            grep '<string' android-resources/widget_strings.xml >> android/app/src/main/res/values/strings.xml || true
+            echo '</resources>' >> android/app/src/main/res/values/strings.xml
+          fi
+        fi
+        
+        # 复制 Widget Provider 类
+        if [ -f android-resources/CountdownWidget.java ]; then
+          cp android-resources/CountdownWidget.java android/app/src/main/java/com/countdown/app/CountdownWidget.java
+        fi
+        
+        # 在 AndroidManifest.xml 中注册 Widget (在 </application> 之前添加)
+        sed -i 's/<\/application>/<receiver android:name=".CountdownWidget" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" \/><\/intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml\/widget_info" \/><\/receiver><\/application>/' android/app/src/main/AndroidManifest.xml || echo "Widget receiver 添加跳过"
+
     - name: Sync Capacitor
       run: npx cap sync android
 
@@ -66,3 +134,4 @@ jobs:
         name: countdown-app-debug
         path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
+
