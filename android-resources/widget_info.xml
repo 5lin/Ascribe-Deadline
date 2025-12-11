@@ -6,6 +6,6 @@
     android:initialLayout="@layout/widget_countdown"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:previewImage="@drawable/widget_preview"
     android:description="@string/widget_description">
 </appwidget-provider>
+
